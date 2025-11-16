@@ -7,16 +7,19 @@ namespace GloboTicket.Frontend.Services.Ordering
     {
         private readonly IShoppingBasketService shoppingBasketService;
         private readonly HttpClient orderingClient;
+        private readonly ILogger<HttpOrderSubmissionService> _logger;
 
-        public HttpOrderSubmissionService(IShoppingBasketService shoppingBasketService, HttpClient orderingClient)
+        public HttpOrderSubmissionService(ILogger<HttpOrderSubmissionService> logger, IShoppingBasketService shoppingBasketService, HttpClient orderingClient)
         {
             this.shoppingBasketService = shoppingBasketService;
             this.orderingClient = orderingClient;
+            _logger = logger;
         }
         public async Task<Guid> SubmitOrder(CheckoutViewModel checkoutViewModel)
         {
             
             var lines = await shoppingBasketService.GetLinesForBasket(checkoutViewModel.BasketId);
+            _logger.LogWarning($"found {lines.Count} lines in the basket");
             var order = new OrderForCreation();
             order.Date = DateTimeOffset.Now;
             order.OrderId = Guid.NewGuid();
@@ -35,6 +38,7 @@ namespace GloboTicket.Frontend.Services.Ordering
             var response = await orderingClient.PostAsJsonAsync("order", order);
             // can be a validation error - haven't implemented validation yet
             var s = await response.Content.ReadAsStringAsync();
+            _logger.LogWarning($"Receive response of {s}");
             response.EnsureSuccessStatusCode();
             return order.OrderId;
         }
