@@ -18,6 +18,9 @@
       <Content Include="MusicRecommender.yaml">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
+      <Content Include="PIC16F15213-14-23-24-43-44-Data-Sheet-40002195D.pdf">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -28,6 +31,7 @@
     <PackageReference Include="Microsoft.SemanticKernel.Plugins.Core" Version="1.67.1-preview" />
     <PackageReference Include="Microsoft.SemanticKernel.PromptTemplates.Handlebars" Version="1.67.1" />
     <PackageReference Include="Microsoft.SemanticKernel.Yaml" Version="1.67.1" />
+    <PackageReference Include="ModelContextProtocol" Version="0.4.0-preview.3" />
   </ItemGroup>
 
 </Project>

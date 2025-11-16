@@ -5,6 +5,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
+using ModelContextProtocol.Client;
 
 var config = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
@@ -31,6 +32,16 @@ kernelBuilder.Services.AddTransient<IFunctionInvocationFilter, AnonymousUserFilt
 
 var kernel = kernelBuilder.Build();
 
+var mcpClient = await McpClient.CreateAsync(new HttpClientTransport(
+ new HttpClientTransportOptions
+ {
+     Name = "GitHub",
+     Endpoint = new Uri("https://api.githubcopilot.com/mcp/"),
+     AdditionalHeaders = new Dictionary<string, string>
+     {
+         ["Authorization"] = $"Bearer {config["GitHubToken"]}"
+     }
+ }));
 var promptTemplate = File.ReadAllText(Path.Join(Directory.GetCurrentDirectory(), "MusicRecommender.yaml"));
 
 var musicRecommender = kernel.CreateFunctionFromPromptYaml(
@@ -42,6 +53,13 @@ var musicRecommender = kernel.CreateFunctionFromPromptYaml(
 
 kernel.ImportPluginFromFunctions("music_recommender", [musicRecommender]);kernel.ImportPluginFromType<Microsoft.SemanticKernel.Plugins.Core.TimePlugin>();
 kernel.ImportPluginFromType<DiscountPlugin>();
+
+var tools = await mcpClient.ListToolsAsync();
+
+kernel.ImportPluginFromFunctions(
+  "GitHub",
+  tools.Select(x => x.AsKernelFunction()));
+
 var executionSettings = new OpenAIPromptExecutionSettings
 {
     MaxTokens = 500,
@@ -63,6 +81,15 @@ multiModalChat.AddUserMessage(
   new Microsoft.SemanticKernel.TextContent("Can you identify this instrument? Be specific about brand and type."),
   new Microsoft.SemanticKernel.ImageContent(File.ReadAllBytes("guitar.jpg"), "image/jpg")
 ]);
+
+// var multiModalChat = new ChatHistory("Your job is to answer questions base on the provided document.");
+// #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+// multiModalChat.AddUserMessage(
+// [
+//     new Microsoft.SemanticKernel.TextContent("What pin is used for the timer T0CKI"),
+//     new BinaryContent(File.ReadAllBytes("PIC16F15213-14-23-24-43-44-Data-Sheet-40002195D.pdf"), "application/pdfgh auth login")
+// ]);
+// #pragma warning restore SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
 var multiModalResponse = await chatCompletionService!.GetChatMessageContentsAsync(multiModalChat, executionSettings, kernel);
 Console.WriteLine(multiModalResponse.Last().Content);
