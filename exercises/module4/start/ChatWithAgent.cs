@@ -27,9 +27,11 @@ internal class ChatWithAgent
         The concert starts at 7:30 pm and is November 20th this year. 
         """;
 
-        var agent = CreateTransportationAgent(config);
+        Console.WriteLine("******** Create the agent ***********");
+        var transportationAgent = CreateTransportationAgent(config);
+        transportationAgent.Kernel.ImportPluginFromType<RideInformationSystemService>();
 
-        var agentresult = agent.InvokeAsync(question);
+        var agentresult = transportationAgent.InvokeAsync(question);
         Console.WriteLine("******** RESPONSE ***********");
         await PrintResult(agentresult);
     }
@@ -55,7 +57,11 @@ internal class ChatWithAgent
                     {
                         // Add Console logging provider
                         builder.AddConsole().SetMinimumLevel(LogLevel.Trace);
-                    })
+                    }),
+                Arguments = new KernelArguments(new OpenAIPromptExecutionSettings()
+                {
+                    FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(),
+                }),
             };
         return transportationAgent;
     }
