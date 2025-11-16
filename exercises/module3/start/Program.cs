@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using modulerag;
 
 var builder = new ConfigurationBuilder();
 builder.SetBasePath(Directory.GetCurrentDirectory())
@@ -20,4 +21,4 @@ var kernelBuilder = Kernel
 
 var kernel = kernelBuilder.Build();
 
-
+await new ChatWithRag().RAG_with_single_prompt(kernel);
