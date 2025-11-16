@@ -50,6 +50,49 @@ internal class ChatWithAgent
         Console.WriteLine("******** Terminating, goal reached ***********");
     }
 
+    public async Task LetAgentFindRideAndHotel(IConfiguration config)
+    {
+        var question =
+        """
+        I am going to a concert that is held at the Seattle Kraken Stadium. The Concert starts at 7:30 pm and is November 20th this year. 
+        """;
+
+        Console.WriteLine("******** Create the ride agent ***********");
+        var rideAgent = CreateTransportationAgent(config);
+        rideAgent.Kernel.ImportPluginFromType<RideInformationSystemService>();
+
+        Console.WriteLine("******** Create the hotel agent ***********");
+        var hotelAgent = HotelBookingAgent.CreateChatCompletionAgent(config);
+        hotelAgent.Kernel.ImportPluginFromType<HotelBookingFunctions>();
+
+        // create the chat history that starts the agent thread
+        var history = new ChatHistory();
+        history.AddMessage(AuthorRole.User, question);
+
+        AgentThread thread = new ChatHistoryAgentThread(history);
+
+        await RunUntilGoalReached(hotelAgent, thread);
+        Console.WriteLine("******** hotel agent done ***********"); 
+        await RunUntilGoalReached(rideAgent, thread);
+
+        Console.WriteLine("******** Done ***********");
+    }
+
+    private async Task RunUntilGoalReached(ChatCompletionAgent agent, AgentThread thread)
+    {
+        var agentResponse = agent.InvokeAsync("", thread);
+
+        await PrintResult(agentResponse);
+        while (!await IsGoalReached(agentResponse))
+        {
+            var input = Console.ReadLine();
+
+            agentResponse = agent.InvokeAsync(input, thread);
+
+            await PrintResult(agentResponse);
+        }
+    }
+
     private async Task<bool> IsGoalReached(IAsyncEnumerable<AgentResponseItem<ChatMessageContent>> agentResponse)
     {
         await foreach(var item in agentResponse)
@@ -73,7 +116,7 @@ internal class ChatWithAgent
             You will ask for approval before you make the booking. 
             You are not allowed to make a booking without user confirmation!
 
-            After you successfully booked the ride you will respond with [** GOAL REACHED **] in your message.            
+            After you successfully booked the ride you will respond with [** GOAL REACHED **] in the lase line of your message.            
             """; 
 
         ChatCompletionAgent transportationAgent =

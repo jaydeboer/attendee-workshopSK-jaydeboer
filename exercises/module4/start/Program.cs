@@ -12,4 +12,4 @@ builder.SetBasePath(Directory.GetCurrentDirectory())
 
 IConfiguration config = builder.Build();
 
-await new ChatWithAgent().LetAgentFindRide(config);
+await new ChatWithAgent().LetAgentFindRideAndHotel(config);
