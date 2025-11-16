@@ -31,10 +31,37 @@ internal class ChatWithAgent
         var transportationAgent = CreateTransportationAgent(config);
         transportationAgent.Kernel.ImportPluginFromType<RideInformationSystemService>();
 
-        var agentresult = transportationAgent.InvokeAsync(question);
-        Console.WriteLine("******** RESPONSE ***********");
-        await PrintResult(agentresult);
+        // get the thread so we can continue the conversation
+        var thread = new ChatHistoryAgentThread();
+        var agentResult = transportationAgent.InvokeAsync(question, thread);
+
+        Console.WriteLine("******** RESPONSE 1 ***********");
+        await PrintResult(agentResult);
+
+        while (!await IsGoalReached(agentResult))
+        {
+            var input = Console.ReadLine();
+
+            agentResult = transportationAgent.InvokeAsync(input, thread);
+
+            Console.WriteLine("******** RESPONSE ***********");
+            await PrintResult(agentResult);
+        }
+        Console.WriteLine("******** Terminating, goal reached ***********");
     }
+
+    private async Task<bool> IsGoalReached(IAsyncEnumerable<AgentResponseItem<ChatMessageContent>> agentResponse)
+    {
+        await foreach(var item in agentResponse)
+        {
+            if(item.Message.Content.Contains("[** GOAL REACHED **]"))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private ChatCompletionAgent CreateTransportationAgent(IConfiguration config)
     {
         var kernel = CreateKernel(config);
@@ -43,8 +70,11 @@ internal class ChatWithAgent
             You are an expert in finding transportation options from a given hotel location to the concert location.
             You will try to get the best options available for an affordable price. Make sure the customer will be there at least 30 minutes before the concert starts at the venue.
             You always suggest 3 options with different price ranges.
-            You will ask for approval before you make the booking.
-            """;
+            You will ask for approval before you make the booking. 
+            You are not allowed to make a booking without user confirmation!
+
+            After you successfully booked the ride you will respond with [** GOAL REACHED **] in your message.            
+            """; 
 
         ChatCompletionAgent transportationAgent =
             new()
