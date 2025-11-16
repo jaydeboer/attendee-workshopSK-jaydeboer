@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 //using Microsoft.SemanticKernel.ChatCompletions;
 
 var config = new ConfigurationBuilder()
@@ -45,11 +46,18 @@ var kernelBuilder = Kernel
     .AddOpenAIChatCompletion(model, new Uri(endpoint), token);
 
 var kernel = kernelBuilder.Build();
-
+var executionSettings = new OpenAIPromptExecutionSettings
+{
+    MaxTokens = 500,
+    Temperature = 0.5,
+    TopP = 1.0,
+    FrequencyPenalty = 0.0,
+    PresencePenalty = 0.0
+};
 
 Console.WriteLine("Hi! I am your AI assistant. Talk to me:");
 var chatHistory = new ChatHistory();
-chatHistory.AddSystemMessage("You are an qirky and snarky expert at finding events for people to attend.");
+chatHistory.AddSystemMessage("You are a digital assistant for GloboTicket, a concert ticketing company. You help customers with their ticket purchasing. Tone: warm and friendly, but to the point.  Do not make things up when you don't know the answer. Just tell the user that you don't know the answer based on your knowledge.");
 var chatCompletionService = kernel.Services.GetService<IChatCompletionService>();
 while (true)
 {
@@ -58,13 +66,17 @@ while (true)
 
     var prompt = Console.ReadLine();
 
-    chatHistory.AddUserMessage(prompt!);
-
-    var response = await chatCompletionService!.GetChatMessageContentsAsync(chatHistory);
-
-
     Console.WriteLine();
     Console.WriteLine("GloboTicket assistant:");
 
-    Console.WriteLine(response.Last().Content);
+    chatHistory.AddUserMessage(prompt!);
+
+    // var response = await chatCompletionService!.GetChatMessageContentsAsync(chatHistory);
+    var responseStream = chatCompletionService!.GetStreamingChatMessageContentsAsync(chatHistory, executionSettings);
+    await foreach (var response in responseStream)
+    {
+        Console.Write(response.Content);
+    }
+
+    // Console.WriteLine(response.Last().Content);
 }
