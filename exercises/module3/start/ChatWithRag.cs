@@ -13,6 +13,20 @@ namespace modulerag;
 
 public class ChatWithRag
 {
+    public async Task RAG_with_datasheet(IConfiguration config)
+    {
+        var memoryConnector = GetLocalKernelMemory(config);
+
+        var question =
+            """
+            What pin is used for the timer T0CKI on a PIC16F15213?
+            """;
+
+        var response = await memoryConnector.AskAsync(question);
+        Console.WriteLine("******** RESPONSE WITH MEMORY ***********");
+        Console.WriteLine(response.Result);
+    }
+
     public async Task RAG_with_memory(IConfiguration config)
     {
         var memoryConnector = GetLocalKernelMemory(config);
@@ -54,6 +68,24 @@ public class ChatWithRag
             var policyContext = await GetVenuePolicyFileContents(kernel, venue);
             await GetResponseOnQuestion(kernel, question, policyContext);
 
+    }
+    private async Task GetAnswerFromQuestion(Kernel kernel, string question, string datasheetContext)
+    {
+        ChatHistory chatHistory = new();
+
+        chatHistory.AddSystemMessage("You are a helpful asistant that finds the information about electronic components.");
+        chatHistory.AddSystemMessage("Always get the information from the question. Never search the web or use internal knowledge!");
+                chatHistory.AddSystemMessage("Always use the datasheet information provided in the prompt");
+        chatHistory.AddSystemMessage($"### Datasheet\n {datasheetContext}");
+
+        chatHistory.AddUserMessage(question);
+        
+        var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
+        var questionResponse = chatCompletionService!.GetStreamingChatMessageContentsAsync(chatHistory, kernel:kernel);
+        await foreach (var response in questionResponse)
+        {
+            Console.Write(response.Content);
+        }
     }
 
     private async Task GetResponseOnQuestion(Kernel kernel, string question, string policyContext)
@@ -132,16 +164,21 @@ public class ChatWithRag
 
     public async Task IngestDocuments(IConfiguration config)
     {
-        var directory = "../../../../datasets/venue-policies";
+        // var directory = "../../../../datasets/venue-policies";
+
+        // var memoryConnector = GetLocalKernelMemory(config);
+
+        // foreach (var file in GetFileListOfPolicyDocuments(directory))
+        // {
+        //     var fullfilename = Path.Combine(directory, file);
+        //     var importResult = await memoryConnector.ImportDocumentAsync(filePath: fullfilename, documentId: file);
+        //     Console.WriteLine($"Imported file {file} with result: {importResult}");
+        // }
 
         var memoryConnector = GetLocalKernelMemory(config);
-
-        foreach (var file in GetFileListOfPolicyDocuments(directory))
-        {
-            var fullfilename = Path.Combine(directory, file);
-            var importResult = await memoryConnector.ImportDocumentAsync(filePath: fullfilename, documentId: file);
-            Console.WriteLine($"Imported file {file} with result: {importResult}");
-        }
+        var fullfilename = "PIC16F15213-14-23-24-43-44-Data-Sheet-40002195D.pdf";
+        var importResult = await memoryConnector.ImportDocumentAsync(filePath: fullfilename, documentId: fullfilename);
+        Console.WriteLine($"Imported file {fullfilename} with result: {importResult}");
     }
 
     private IKernelMemory GetLocalKernelMemory(IConfiguration config)
@@ -183,6 +220,11 @@ public class ChatWithRag
         })
         // 6. Integrate AI services
         .WithOpenAITextEmbeddingGeneration(openAiEmbeddingsConfig)
+        .WithCustomTextPartitioningOptions(new Microsoft.KernelMemory.Configuration.TextPartitioningOptions
+        {
+            MaxTokensPerParagraph = 1000,
+            OverlappingTokens = 100
+        })
         .WithOpenAITextGeneration(textGenerationConfig);
 
         return kernelMemoryBuilder.Build();
