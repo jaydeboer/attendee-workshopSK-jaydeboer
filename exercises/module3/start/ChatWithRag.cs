@@ -13,6 +13,33 @@ namespace modulerag;
 
 public class ChatWithRag
 {
+    public async Task RAG_with_memory(IConfiguration config)
+    {
+        var memoryConnector = GetLocalKernelMemory(config);
+
+        var question =
+            """
+            Can I bring a camera to the concert at AFAS Live?
+            """;
+
+        var response = await memoryConnector.AskAsync(question);
+        Console.WriteLine("******** RESPONSE WITH MEMORY ***********");
+        Console.WriteLine(response.Result);
+    }
+
+    public async Task AskVenueQuestion(IConfiguration config)
+    {
+        var memoryConnector = GetLocalKernelMemory(config);
+        var question =
+            """
+            Which venue allows a backpack?
+            """;
+        var response = await memoryConnector.AskAsync(question);
+        Console.WriteLine("******** RESPONSE WITH MEMORY ***********");
+        Console.WriteLine(response.Result);
+    }
+
+
     public async Task RAG_with_single_prompt(Kernel kernel)
     {
         var question = 

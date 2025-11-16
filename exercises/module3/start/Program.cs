@@ -20,5 +20,6 @@ var kernelBuilder = Kernel
     .AddOpenAIChatCompletion(model, new Uri(endpoint), token);
 
 var kernel = kernelBuilder.Build();
-await new ChatWithRag().IngestDocuments(config);
-
+//await new ChatWithRag().IngestDocuments(config);
+await new ChatWithRag().RAG_with_memory(config);
+await new ChatWithRag().AskVenueQuestion(config);
